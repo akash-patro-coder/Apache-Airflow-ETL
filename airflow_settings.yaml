@@ -1,0 +1,5 @@
+airflow:
+  connections:
+    - conn_id: market_database_conn
+      conn_type: sqlite
+      host: /usr/local/airflow/market_data.db
