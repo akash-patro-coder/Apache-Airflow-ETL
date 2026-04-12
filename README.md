@@ -1,326 +1,152 @@
-# 🚀 Apache Airflow ETL Pipeline (Market Data Project)
-
-## 📌 Project Overview
-
-This project demonstrates a **production-style ETL pipeline** built using **Apache Airflow**.
-It extracts stock market data from an external API, transforms it into a structured format, and loads it into a database.
-
-The project is designed with **modular architecture**, using:
-
-- `dags/` → orchestration
-- `include/` → reusable business logic
-- `plugins/` → custom Airflow extensions
+# 📊 Stock Market Data Pipeline using Airflow & GCP
 
 ---
 
-# 🏗️ Architecture Overview
+## 1️⃣ Problem Statement
 
-## 🔷 High-Level Flow
+The goal of this project is to build a scalable data pipeline that ingests stock market data from the Polygon API, processes it, and stores it in a cloud-based data warehouse for analytics and visualization.
 
-```
-Polygon API → Extract → Transform → Load → SQLite DB
-```
+In real-world financial systems, raw API data needs to be:
+
+- reliably ingested  
+- transformed into structured format  
+- stored in a data lake and warehouse  
+- made available for business insights  
+
+This project solves that by implementing an end-to-end ETL pipeline using Apache Airflow and Google Cloud Platform.
 
 ---
 
-## 📊 Architecture Diagram (Text Representation)
+## 2️⃣ Architecture Diagram
 
 ```
-                ┌──────────────────────┐
-                │   Polygon API        │
-                └─────────┬────────────┘
-                          │
-                          ▼
-        ┌────────────────────────────────┐
-        │  Custom Operator (plugins/)    │
-        │  PolygonAPIToXComOperator      │
-        └─────────┬──────────────────────┘
-                  │ (XCom)
-                  ▼
-        ┌────────────────────────────────┐
-        │  Transform Layer (include/)    │
-        │  transform_market_data()       │
-        └─────────┬──────────────────────┘
-                  │
-                  ▼
-        ┌────────────────────────────────┐
-        │   Load Layer (Airflow Hook)    │
-        │   SQLite Database              │
-        └────────────────────────────────┘
+Polygon API
+    ↓
+Airflow (Custom Operator)
+    ↓
+Transform (Pandas)
+    ↓
+Google Cloud Storage (Data Lake)
+    ↓
+BigQuery (Data Warehouse)
+    ↓
+Looker Studio (Dashboard)
 ```
 
 ---
 
-# 📂 Project Structure
+## 3️⃣ Tech Stack
 
-```
-your-project/
-├── dags/
-│   └── market_etl.py
-│
-├── include/
-│   ├── api/
-│   │   └── polygon_api.py
-│   ├── utils/
-│   │   └── transform.py
-│   └── config.py
-│
-├── plugins/
-│   ├── custom_operator.py
-│   ├── custom_hook.py
-│   └── __init__.py
-│
-├── tests/
-│   └── test_dag.py
-│
-├── airflow_settings.yaml
-├── Dockerfile
-├── packages.txt
-├── requirements.txt
-└── README.md
-```
+- **Orchestration:** Apache Airflow  
+- **Programming:** Python  
+- **API Source:** Polygon API  
+- **Data Processing:** Pandas  
+- **Data Lake:** Google Cloud Storage (GCS)  
+- **Data Warehouse:** BigQuery  
+- **Visualization:** Looker Studio  
+- **Containerization:** Docker  
 
 ---
 
-# ⚙️ Components Explanation
+## 4️⃣ Pipeline Flow
 
-## 1️⃣ DAG (Orchestration Layer)
+### 🔹 Extract
+- Custom Airflow operator fetches stock market data from Polygon API  
 
-📄 `dags/market_etl.py`
+### 🔹 Transform
+- Data is cleaned and structured using Pandas  
 
-- Controls workflow execution
-- Defines task dependencies
-- Uses Airflow TaskFlow API + Custom Operator
+### 🔹 Load to Data Lake
+- Transformed data is uploaded to Google Cloud Storage (GCS)  
 
-### Flow:
+### 🔹 Load to Data Warehouse
+- Data is loaded from GCS into BigQuery  
 
-```
-extract → transform → load
-```
-
----
-
-## 2️⃣ Plugins (Custom Airflow Extensions)
-
-📂 `plugins/`
-
-### 🔹 Custom Operator
-
-- Handles API extraction logic
-- Reusable across multiple DAGs
-
-```python
-PolygonAPIToXComOperator
-```
-
-👉 Why?
-
-- Keeps DAG clean
-- Promotes reuse
-- Follows Airflow best practices
+### 🔹 Visualization
+- BigQuery data is connected to Looker Studio for dashboards  
 
 ---
 
-### 🔹 Custom Hook
+## 5️⃣ How to Run (Step-by-Step)
 
-- Manages database connection
-- Abstracts connection logic
-
----
-
-## 3️⃣ Include Folder (Business Logic Layer)
-
-📂 `include/`
-
-### 🔹 API Module
-
-- Handles API calls
-
-### 🔹 Transform Module
-
-- Converts JSON → DataFrame
-
-### 🔹 Config Module
-
-- Stores constants like API key
+### 🔹 Prerequisites
+- Python 3.9+  
+- Docker installed  
+- Google Cloud account  
+- Polygon API key  
 
 ---
 
-## 4️⃣ Load Layer
-
-- Uses `SqliteHook`
-- Stores data into SQLite database
-
----
-
-# 🔄 ETL Process Explanation
-
-## 🟢 1. Extract
-
-- Data fetched from Polygon API
-- Implemented using custom operator
-- Output stored in XCom
-
----
-
-## 🟡 2. Transform
-
-- JSON flattened into structured format
-- Missing values handled
-- Converted to Pandas DataFrame
-
----
-
-## 🔵 3. Load
-
-- Data inserted into SQLite table
-- Append mode used for incremental loads
-
----
-
-# ⚡ DAG Execution Flow
-
-```
-Task 1: extract_market_data
-        ↓
-Task 2: transform_task
-        ↓
-Task 3: load_task
-```
-
----
-
-# 🧪 Testing
-
-📂 `tests/`
-
-- DAG validation using `DagBag`
-- Ensures DAG loads correctly
-
----
-
-# 🐳 Docker Setup
-
-## Build & Run
+### 🔹 Step 1: Clone Repository
 
 ```bash
-astro dev start
+git clone https://github.com/akash-patro-coder/Apache-Airflow-ETL
+cd Apache-Airflow-ETL
 ```
 
 ---
 
-## Access UI
-
-```
-http://localhost:8080
-```
-
----
-
-# 🔌 Airflow Connection Setup
-
-## Connection Details
-
-| Field   | Value                             |
-| ------- | --------------------------------- |
-| Conn ID | market_database_conn              |
-| Type    | SQLite                            |
-| Host    | /usr/local/airflow/market_data.db |
-
----
-
-# 📦 Requirements
-
-```txt
-apache-airflow
-pandas
-requests
-apache-airflow-providers-sqlite
-```
-
----
-
-# 🔐 Environment Variables
-
-Update API key:
-
-```python
-API_KEY = "YOUR_API_KEY"
-```
-
----
-
-# 🚀 How to Run
+### 🔹 Step 2: Install Dependencies
 
 ```bash
-git clone <repo-url>
-cd your-project
-astro dev start
+pip install -r requirements.txt
 ```
 
-Then:
+---
 
-- Open Airflow UI
-- Enable DAG
-- Trigger run
+### 🔹 Step 3: Setup GCP
+
+- Create GCS bucket  
+- Create BigQuery dataset  
+
+Enable APIs:
+- BigQuery API  
+- Cloud Storage API  
+
+Authenticate:
+
+```bash
+gcloud auth application-default login
+```
 
 ---
 
-# 📈 Key Features
+### 🔹 Step 4: Configure Environment
 
-✅ Modular architecture
-✅ Custom Airflow plugins
-✅ Clean DAG design
-✅ Scalable ETL pipeline
-✅ Reusable components
-✅ Production-ready structure
+Update values in DAG or use environment variables:
 
----
-
-# 🔥 Interview Explanation (1 Minute Pitch)
-
-> “I built a modular ETL pipeline using Apache Airflow where extraction is handled by a custom operator, transformation logic is separated into reusable modules, and data is loaded into SQLite. The DAG only manages orchestration, ensuring scalability and maintainability.”
+```bash
+GCP_BUCKET=your-bucket-name
+GCP_PROJECT=your-project-id
+BQ_DATASET=your_dataset
+BQ_TABLE=market_table
+```
 
 ---
 
-# 🧠 Design Decisions
+### 🔹 Step 5: Run Airflow
 
-| Decision         | Reason               |
-| ---------------- | -------------------- |
-| Use plugins      | Reusability          |
-| Use include      | Clean separation     |
-| Use SQLite       | Lightweight testing  |
-| Use TaskFlow API | Simpler dependencies |
+```bash
+docker-compose up
+```
 
----
-
-# 🚀 Future Enhancements
-
-- Add AWS S3 storage
-- Integrate Snowflake / BigQuery
-- Add alerting (Slack/Email)
-- Implement retries + logging
-- Add multiple stock tickers
-- CI/CD pipeline
+- Open Airflow UI: http://localhost:8080  
+- Trigger DAG: `market_etl`  
 
 ---
 
-# 🧑‍💻 Author
+## 6️⃣ Dashboard Screenshot
 
-**Akash Patro**
+👉 Add your Looker Studio dashboard screenshot here  
 
----
+Example:
 
-# ⭐ Conclusion
+```
+<img width="1024" height="1536" alt="AAPL stock dashboard overview" src="https://github.com/user-attachments/assets/8a9e4ef1-3bef-4569-9e88-c03be617671e" />
 
-This project demonstrates:
 
-- Real-world ETL design
-- Airflow best practices
-- Production-ready structure
+```
 
-Perfect for:
-✔ Data Engineer roles
-✔ Backend/Data pipeline interviews
+## ⚡ Final Summary
 
----
+End-to-end data pipeline using Airflow and GCP to ingest, transform, and analyze stock market data from Polygon API.
