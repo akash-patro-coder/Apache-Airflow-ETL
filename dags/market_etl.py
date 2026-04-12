@@ -9,8 +9,12 @@ from plugins.custom_operator import PolygonAPIToXComOperator
 from include.utils.transform import transform_market_data
 from include.config import API_KEY, TICKER
 
-# DB Hook
+# DB Hook (keep if you still want SQLite backup - optional)
 from airflow.providers.sqlite.hooks.sqlite import SqliteHook
+
+# GCP
+from include.gcp.gcs_upload import upload_to_gcs
+from include.gcp.bigquery_load import load_json_from_gcs_to_bq
 
 
 # Default args
@@ -32,7 +36,7 @@ with DAG(
 ) as dag:
 
     # -------------------------
-    # 1. EXTRACT (Custom Operator)
+    # 1. EXTRACT
     # -------------------------
     extract_task = PolygonAPIToXComOperator(
         task_id="extract_market_data",
@@ -51,7 +55,7 @@ with DAG(
     transformed_data = transform_task(extract_task.output)
 
     # -------------------------
-    # 3. LOAD
+    # 3. LOAD TO SQLITE (optional - keep or remove)
     # -------------------------
     @task()
     def load_task(df):
@@ -65,10 +69,40 @@ with DAG(
             index=False
         )
 
-    load_task(transformed_data)
+    sqlite_loaded = load_task(transformed_data)
 
+    # -------------------------
+    # 4. UPLOAD TO GCS
+    # -------------------------
+    @task()
+    def upload_to_gcs_task(df):
+        data = df.to_dict(orient="records")
 
-# -------------------------
-# DAG FLOW (visual)
-# extract → transform → load
-# -------------------------
+        bucket_name = "market-data-bucket-prod"
+        file_name = f"market_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+        upload_to_gcs(bucket_name, file_name, data)
+
+        return file_name
+
+    gcs_file = upload_to_gcs_task(transformed_data)
+
+    # -------------------------
+    # 5. LOAD TO BIGQUERY
+    # -------------------------
+    @task()
+    def load_to_bq_task(file_name):
+        project_id = "market-analytics-183"
+        dataset_id = "stock_market_dw"
+        table_id = "daily_prices"
+
+        gcs_uri = f"gs://market-data-bucket-prod/{file_name}"
+
+        load_json_from_gcs_to_bq(project_id, dataset_id, table_id, gcs_uri)
+
+    bq_loaded = load_to_bq_task(gcs_file)
+
+    # -------------------------
+    # DAG FLOW
+    # -------------------------
+    extract_task >> transformed_data >> sqlite_loaded >> gcs_file >> bq_loaded
